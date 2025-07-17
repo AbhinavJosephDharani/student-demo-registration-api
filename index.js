@@ -18,7 +18,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 app.get('/', (req, res) => res.send('API is running!'));
 
 // Get time slots availability
-app.get('/time-slots', async (req, res) => {
+app.get('/api/time-slots', async (req, res) => {
   try {
     // Get current registrations for each time slot
     const registrations = await Student.find();
@@ -49,7 +49,7 @@ app.get('/time-slots', async (req, res) => {
 });
 
 // Register a student
-app.post('/register', async (req, res) => {
+app.post('/api/register', async (req, res) => {
   try {
     const { studentId, firstName, lastName, projectTitle, email, phone, timeSlot } = req.body;
     
@@ -98,7 +98,7 @@ app.post('/register', async (req, res) => {
 });
 
 // Admin: Get all registrations
-app.get('/admin/registrations', async (req, res) => {
+app.get('/api/admin/registrations', async (req, res) => {
   try {
     const students = await Student.find();
     res.json(students);
@@ -108,4 +108,8 @@ app.get('/admin/registrations', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+module.exports = app;

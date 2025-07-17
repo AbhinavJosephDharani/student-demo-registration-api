@@ -12,33 +12,26 @@ function App() {
     timeSlot: ''
   })
 
-  const [timeSlots, setTimeSlots] = useState([
-    { id: 1, date: '4/19/2070', time: '6:00 PM – 7:00 PM', available: 6, max: 6 },
-    { id: 2, date: '4/19/2070', time: '7:00 PM – 8:00 PM', available: 6, max: 6 },
-    { id: 3, date: '4/19/2070', time: '8:00 PM – 9:00 PM', available: 6, max: 6 },
-    { id: 4, date: '4/20/2070', time: '6:00 PM – 7:00 PM', available: 6, max: 6 },
-    { id: 5, date: '4/20/2070', time: '7:00 PM – 8:00 PM', available: 6, max: 6 },
-    { id: 6, date: '4/20/2070', time: '8:00 PM – 9:00 PM', available: 6, max: 6 }
-  ])
-
+  const [timeSlots, setTimeSlots] = useState([])
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  // Load registrations from localStorage on component mount
+  // Fetch time slot availability on component mount
   useEffect(() => {
-    updateTimeSlotAvailability()
+    fetchTimeSlots()
   }, [])
 
-  const updateTimeSlotAvailability = () => {
-    const registrations = JSON.parse(localStorage.getItem('registrations') || '[]')
-    
-    setTimeSlots(prev => prev.map(slot => {
-      const registeredCount = registrations.filter(reg => reg.timeSlot === slot.id).length
-      return {
-        ...slot,
-        available: Math.max(0, slot.max - registeredCount)
+  const fetchTimeSlots = async () => {
+    try {
+      const response = await fetch('/api/time-slots')
+      if (response.ok) {
+        const slots = await response.json()
+        setTimeSlots(slots)
       }
-    }))
+    } catch (error) {
+      console.error('Error fetching time slots:', error)
+      setMessage('Could not load time slots. Please try again later.')
+    }
   }
 
   const handleInputChange = (e) => {
@@ -55,54 +48,39 @@ function App() {
     setMessage('')
 
     try {
-      // Check if student is already registered
-      const registrations = JSON.parse(localStorage.getItem('registrations') || '[]')
-      const existingRegistration = registrations.find(reg => reg.studentId === formData.studentId)
-      
-      if (existingRegistration) {
-        setMessage(`This student ID is already registered. Current registration: Time Slot ${existingRegistration.timeSlot}`)
-        setIsLoading(false)
-        return
-      }
-
-      // Check if time slot is available
-      const slotRegistrations = registrations.filter(reg => reg.timeSlot === parseInt(formData.timeSlot))
-      const selectedSlot = timeSlots.find(slot => slot.id === parseInt(formData.timeSlot))
-      
-      if (slotRegistrations.length >= selectedSlot.max) {
-        setMessage('Time slot is full. Please select a different slot.')
-        setIsLoading(false)
-        return
-      }
-
-      // Save registration to localStorage
-      const newRegistration = {
-        ...formData,
-        timeSlot: parseInt(formData.timeSlot),
-        registeredAt: new Date().toISOString()
-      }
-      
-      registrations.push(newRegistration)
-      localStorage.setItem('registrations', JSON.stringify(registrations))
-
-      setMessage('Registration successful! You have been registered for the selected time slot.')
-      
-      // Update time slot availability
-      updateTimeSlotAvailability()
-      
-      // Reset form
-      setFormData({
-        studentId: '',
-        firstName: '',
-        lastName: '',
-        projectTitle: '',
-        email: '',
-        phone: '',
-        timeSlot: ''
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
       })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setMessage(data.message)
+        // Refresh time slots to get updated availability
+        await fetchTimeSlots()
+        // Reset form
+        setFormData({
+          studentId: '',
+          firstName: '',
+          lastName: '',
+          projectTitle: '',
+          email: '',
+          phone: '',
+          timeSlot: ''
+        })
+      } else {
+        if (data.error === 'Student already registered') {
+          setMessage(`${data.message} Current registration: Time Slot ${data.existingRegistration.timeSlot}`)
+        } else {
+          setMessage(data.error || 'Registration failed. Please try again.')
+        }
+      }
     } catch (error) {
-      console.error('Registration error:', error)
-      setMessage('Registration failed. Please try again.')
+      setMessage('Network error. Please check your connection and try again.')
     } finally {
       setIsLoading(false)
     }
