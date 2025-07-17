@@ -21,16 +21,25 @@ app.use((req, res, next) => {
 // Connect to MongoDB with better error handling
 const connectDB = async () => {
   try {
+    console.log('Environment check:');
+    console.log('- NODE_ENV:', process.env.NODE_ENV);
+    console.log('- MONGODB_URI exists:', !!process.env.MONGODB_URI);
+    console.log('- MONGODB_URI length:', process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0);
+    
     if (!process.env.MONGODB_URI) {
       console.error('MONGODB_URI environment variable is not set');
       return false;
     }
+    
+    console.log('Attempting to connect to MongoDB...');
+    console.log('Connection string starts with:', process.env.MONGODB_URI.substring(0, 20) + '...');
     
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('MongoDB connected successfully');
     return true;
   } catch (err) {
     console.error('MongoDB connection error:', err.message);
+    console.error('Full error:', err);
     return false;
   }
 };
