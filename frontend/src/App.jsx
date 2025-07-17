@@ -27,6 +27,7 @@ function App() {
       if (response.ok) {
         const slots = await response.json()
         setTimeSlots(slots)
+        setMessage('') // Clear any previous messages
       } else {
         throw new Error('API response not ok')
       }
@@ -41,7 +42,7 @@ function App() {
         { id: 5, date: '4/20/2070', time: '7:00 PM – 8:00 PM', available: 6 },
         { id: 6, date: '4/20/2070', time: '8:00 PM – 9:00 PM', available: 6 }
       ])
-      setMessage('Note: Using fallback time slots. Registration will be simulated.')
+      setMessage('⚠️ API temporarily unavailable. Using demo time slots. Registration will be simulated.')
     }
   }
 
@@ -93,7 +94,7 @@ function App() {
     } catch (error) {
       console.error('Registration error:', error)
       // Fallback: simulate successful registration
-      setMessage('Registration submitted successfully! (Simulated - API not available)')
+      setMessage('✅ Registration submitted successfully! (Demo mode - API not available)')
       // Reset form
       setFormData({
         studentId: '',
