@@ -23,7 +23,7 @@ function App() {
 
   const fetchTimeSlots = async () => {
     try {
-      const response = await fetch('https://student-demo-registration.vercel.app/time-slots')
+      const response = await fetch('https://student-demo-registration.vercel.app/api/time-slots')
       if (response.ok) {
         const slots = await response.json()
         setTimeSlots(slots)
@@ -56,7 +56,7 @@ function App() {
     setMessage('')
 
     try {
-      const response = await fetch('https://student-demo-registration.vercel.app/register', {
+      const response = await fetch('https://student-demo-registration.vercel.app/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
