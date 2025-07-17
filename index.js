@@ -6,20 +6,60 @@ const Student = require('./models/Student');
 const app = express();
 app.use(express.json());
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI, { 
-  useNewUrlParser: true, 
-  useUnifiedTopology: true 
-})
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.error('MongoDB connection error:', err));
+// Add CORS headers for frontend requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
+// Connect to MongoDB with better error handling
+const connectDB = async () => {
+  try {
+    if (!process.env.MONGODB_URI) {
+      console.error('MONGODB_URI environment variable is not set');
+      return false;
+    }
+    
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('MongoDB connected successfully');
+    return true;
+  } catch (err) {
+    console.error('MongoDB connection error:', err.message);
+    return false;
+  }
+};
+
+// Initialize database connection
+let dbConnected = false;
+connectDB().then(connected => {
+  dbConnected = connected;
+});
 
 // Health check
-app.get('/', (req, res) => res.send('API is running!'));
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'API is running!',
+    mongodb: dbConnected ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Get time slots availability
 app.get('/api/time-slots', async (req, res) => {
   try {
+    if (!dbConnected) {
+      return res.status(500).json({ 
+        error: 'Database not connected',
+        message: 'MongoDB connection is not available'
+      });
+    }
+
     // Get current registrations for each time slot
     const registrations = await Student.find();
     
@@ -44,13 +84,24 @@ app.get('/api/time-slots', async (req, res) => {
 
     res.json(slotsWithAvailability);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error in /api/time-slots:', err);
+    res.status(500).json({ 
+      error: err.message,
+      message: 'Failed to fetch time slots'
+    });
   }
 });
 
 // Register a student
 app.post('/api/register', async (req, res) => {
   try {
+    if (!dbConnected) {
+      return res.status(500).json({ 
+        error: 'Database not connected',
+        message: 'MongoDB connection is not available'
+      });
+    }
+
     const { studentId, firstName, lastName, projectTitle, email, phone, timeSlot } = req.body;
     
     // Check if student is already registered
@@ -93,17 +144,32 @@ app.post('/api/register', async (req, res) => {
       student 
     });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('Error in /api/register:', err);
+    res.status(400).json({ 
+      error: err.message,
+      message: 'Failed to register student'
+    });
   }
 });
 
 // Admin: Get all registrations
 app.get('/api/admin/registrations', async (req, res) => {
   try {
+    if (!dbConnected) {
+      return res.status(500).json({ 
+        error: 'Database not connected',
+        message: 'MongoDB connection is not available'
+      });
+    }
+
     const students = await Student.find();
     res.json(students);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error in /api/admin/registrations:', err);
+    res.status(500).json({ 
+      error: err.message,
+      message: 'Failed to fetch registrations'
+    });
   }
 });
 
