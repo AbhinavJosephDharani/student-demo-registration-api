@@ -41,11 +41,28 @@ connectDB().then(connected => {
   dbConnected = connected;
 });
 
+// Update connection status when mongoose connects
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB connection established');
+  dbConnected = true;
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB connection disconnected');
+  dbConnected = false;
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+  dbConnected = false;
+});
+
 // Health check
 app.get('/', (req, res) => {
+  const isConnected = mongoose.connection.readyState === 1;
   res.json({ 
     message: 'API is running!',
-    mongodb: dbConnected ? 'connected' : 'disconnected',
+    mongodb: isConnected ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString()
   });
 });
