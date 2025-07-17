@@ -12,34 +12,33 @@ function App() {
     timeSlot: ''
   })
 
-  const [timeSlots, setTimeSlots] = useState([])
+  const [timeSlots, setTimeSlots] = useState([
+    { id: 1, date: '4/19/2070', time: '6:00 PM – 7:00 PM', available: 6, max: 6 },
+    { id: 2, date: '4/19/2070', time: '7:00 PM – 8:00 PM', available: 6, max: 6 },
+    { id: 3, date: '4/19/2070', time: '8:00 PM – 9:00 PM', available: 6, max: 6 },
+    { id: 4, date: '4/20/2070', time: '6:00 PM – 7:00 PM', available: 6, max: 6 },
+    { id: 5, date: '4/20/2070', time: '7:00 PM – 8:00 PM', available: 6, max: 6 },
+    { id: 6, date: '4/20/2070', time: '8:00 PM – 9:00 PM', available: 6, max: 6 }
+  ])
+
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  // Fetch time slot availability on component mount
+  // Load registrations from localStorage on component mount
   useEffect(() => {
-    fetchTimeSlots()
+    updateTimeSlotAvailability()
   }, [])
 
-  const fetchTimeSlots = async () => {
-    try {
-      const response = await fetch('https://student-demo-registration.vercel.app/api/time-slots')
-      if (response.ok) {
-        const slots = await response.json()
-        setTimeSlots(slots)
+  const updateTimeSlotAvailability = () => {
+    const registrations = JSON.parse(localStorage.getItem('registrations') || '[]')
+    
+    setTimeSlots(prev => prev.map(slot => {
+      const registeredCount = registrations.filter(reg => reg.timeSlot === slot.id).length
+      return {
+        ...slot,
+        available: Math.max(0, slot.max - registeredCount)
       }
-    } catch (error) {
-      console.error('Error fetching time slots:', error)
-      // Fallback to hardcoded time slots if API fails
-      setTimeSlots([
-        { id: 1, date: '4/19/2070', time: '6:00 PM – 7:00 PM', available: 6 },
-        { id: 2, date: '4/19/2070', time: '7:00 PM – 8:00 PM', available: 6 },
-        { id: 3, date: '4/19/2070', time: '8:00 PM – 9:00 PM', available: 6 },
-        { id: 4, date: '4/20/2070', time: '6:00 PM – 7:00 PM', available: 6 },
-        { id: 5, date: '4/20/2070', time: '7:00 PM – 8:00 PM', available: 6 },
-        { id: 6, date: '4/20/2070', time: '8:00 PM – 9:00 PM', available: 6 }
-      ])
-    }
+    }))
   }
 
   const handleInputChange = (e) => {
@@ -56,40 +55,54 @@ function App() {
     setMessage('')
 
     try {
-      const response = await fetch('https://student-demo-registration.vercel.app/api/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setMessage(data.message)
-        // Refresh time slots to get updated availability
-        await fetchTimeSlots()
-        // Reset form
-        setFormData({
-          studentId: '',
-          firstName: '',
-          lastName: '',
-          projectTitle: '',
-          email: '',
-          phone: '',
-          timeSlot: ''
-        })
-      } else {
-        if (data.error === 'Student already registered') {
-          setMessage(`${data.message} Current registration: Time Slot ${data.existingRegistration.timeSlot}`)
-        } else {
-          setMessage(data.error || 'Registration failed. Please try again.')
-        }
+      // Check if student is already registered
+      const registrations = JSON.parse(localStorage.getItem('registrations') || '[]')
+      const existingRegistration = registrations.find(reg => reg.studentId === formData.studentId)
+      
+      if (existingRegistration) {
+        setMessage(`This student ID is already registered. Current registration: Time Slot ${existingRegistration.timeSlot}`)
+        setIsLoading(false)
+        return
       }
+
+      // Check if time slot is available
+      const slotRegistrations = registrations.filter(reg => reg.timeSlot === parseInt(formData.timeSlot))
+      const selectedSlot = timeSlots.find(slot => slot.id === parseInt(formData.timeSlot))
+      
+      if (slotRegistrations.length >= selectedSlot.max) {
+        setMessage('Time slot is full. Please select a different slot.')
+        setIsLoading(false)
+        return
+      }
+
+      // Save registration to localStorage
+      const newRegistration = {
+        ...formData,
+        timeSlot: parseInt(formData.timeSlot),
+        registeredAt: new Date().toISOString()
+      }
+      
+      registrations.push(newRegistration)
+      localStorage.setItem('registrations', JSON.stringify(registrations))
+
+      setMessage('Registration successful! You have been registered for the selected time slot.')
+      
+      // Update time slot availability
+      updateTimeSlotAvailability()
+      
+      // Reset form
+      setFormData({
+        studentId: '',
+        firstName: '',
+        lastName: '',
+        projectTitle: '',
+        email: '',
+        phone: '',
+        timeSlot: ''
+      })
     } catch (error) {
       console.error('Registration error:', error)
-      setMessage('Network error. Please check your connection and try again.')
+      setMessage('Registration failed. Please try again.')
     } finally {
       setIsLoading(false)
     }
