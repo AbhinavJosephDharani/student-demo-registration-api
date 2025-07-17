@@ -12,17 +12,26 @@ function App() {
     timeSlot: ''
   })
 
-  const [timeSlots, setTimeSlots] = useState([
-    { id: 1, date: '4/19/2070', time: '6:00 PM – 7:00 PM', available: 6, max: 6 },
-    { id: 2, date: '4/19/2070', time: '7:00 PM – 8:00 PM', available: 6, max: 6 },
-    { id: 3, date: '4/19/2070', time: '8:00 PM – 9:00 PM', available: 6, max: 6 },
-    { id: 4, date: '4/20/2070', time: '6:00 PM – 7:00 PM', available: 6, max: 6 },
-    { id: 5, date: '4/20/2070', time: '7:00 PM – 8:00 PM', available: 6, max: 6 },
-    { id: 6, date: '4/20/2070', time: '8:00 PM – 9:00 PM', available: 6, max: 6 }
-  ])
-
+  const [timeSlots, setTimeSlots] = useState([])
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  // Fetch time slot availability on component mount
+  useEffect(() => {
+    fetchTimeSlots()
+  }, [])
+
+  const fetchTimeSlots = async () => {
+    try {
+      const response = await fetch('https://student-demo-registration.vercel.app/time-slots')
+      if (response.ok) {
+        const slots = await response.json()
+        setTimeSlots(slots)
+      }
+    } catch (error) {
+      console.error('Error fetching time slots:', error)
+    }
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -38,7 +47,7 @@ function App() {
     setMessage('')
 
     try {
-      const response = await fetch('http://localhost:3000/register', {
+      const response = await fetch('https://student-demo-registration.vercel.app/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,13 +58,9 @@ function App() {
       const data = await response.json()
 
       if (response.ok) {
-        setMessage('Registration successful! You have been registered for the selected time slot.')
-        // Update available seats
-        setTimeSlots(prev => prev.map(slot => 
-          slot.id === parseInt(formData.timeSlot) 
-            ? { ...slot, available: slot.available - 1 }
-            : slot
-        ))
+        setMessage(data.message)
+        // Refresh time slots to get updated availability
+        await fetchTimeSlots()
         // Reset form
         setFormData({
           studentId: '',
@@ -67,7 +72,11 @@ function App() {
           timeSlot: ''
         })
       } else {
-        setMessage(data.error || 'Registration failed. Please try again.')
+        if (data.error === 'Student already registered') {
+          setMessage(`${data.message} Current registration: Time Slot ${data.existingRegistration.timeSlot}`)
+        } else {
+          setMessage(data.error || 'Registration failed. Please try again.')
+        }
       }
     } catch (error) {
       setMessage('Network error. Please check your connection and try again.')
