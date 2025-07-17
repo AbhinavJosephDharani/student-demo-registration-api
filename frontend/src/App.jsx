@@ -30,6 +30,15 @@ function App() {
       }
     } catch (error) {
       console.error('Error fetching time slots:', error)
+      // Fallback to hardcoded time slots if API fails
+      setTimeSlots([
+        { id: 1, date: '4/19/2070', time: '6:00 PM – 7:00 PM', available: 6 },
+        { id: 2, date: '4/19/2070', time: '7:00 PM – 8:00 PM', available: 6 },
+        { id: 3, date: '4/19/2070', time: '8:00 PM – 9:00 PM', available: 6 },
+        { id: 4, date: '4/20/2070', time: '6:00 PM – 7:00 PM', available: 6 },
+        { id: 5, date: '4/20/2070', time: '7:00 PM – 8:00 PM', available: 6 },
+        { id: 6, date: '4/20/2070', time: '8:00 PM – 9:00 PM', available: 6 }
+      ])
     }
   }
 
@@ -79,6 +88,7 @@ function App() {
         }
       }
     } catch (error) {
+      console.error('Registration error:', error)
       setMessage('Network error. Please check your connection and try again.')
     } finally {
       setIsLoading(false)
@@ -87,9 +97,6 @@ function App() {
 
   return (
     <div className="app">
-      <div style={{ background: 'red', color: 'white', padding: '10px', textAlign: 'center', fontSize: '18px', fontWeight: 'bold' }}>
-        🎉 REGISTRATION FORM IS WORKING! 🎉
-      </div>
       <header className="app-header">
         <h1>Student Demo Registration System</h1>
         <p>Web Technology Class - Project Demonstrations</p>
@@ -243,4 +250,4 @@ function App() {
   )
 }
 
-export default App
+export default App 
