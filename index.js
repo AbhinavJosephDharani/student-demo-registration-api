@@ -81,7 +81,8 @@ app.get('/', (req, res) => {
 // Get time slots availability
 app.get('/api/time-slots', async (req, res) => {
   try {
-    if (!dbConnected) {
+    const isConnected = mongoose.connection.readyState === 1;
+    if (!isConnected) {
       return res.status(500).json({ 
         error: 'Database not connected',
         message: 'MongoDB connection is not available'
@@ -123,7 +124,8 @@ app.get('/api/time-slots', async (req, res) => {
 // Register a student
 app.post('/api/register', async (req, res) => {
   try {
-    if (!dbConnected) {
+    const isConnected = mongoose.connection.readyState === 1;
+    if (!isConnected) {
       return res.status(500).json({ 
         error: 'Database not connected',
         message: 'MongoDB connection is not available'
@@ -183,7 +185,8 @@ app.post('/api/register', async (req, res) => {
 // Admin: Get all registrations
 app.get('/api/admin/registrations', async (req, res) => {
   try {
-    if (!dbConnected) {
+    const isConnected = mongoose.connection.readyState === 1;
+    if (!isConnected) {
       return res.status(500).json({ 
         error: 'Database not connected',
         message: 'MongoDB connection is not available'
