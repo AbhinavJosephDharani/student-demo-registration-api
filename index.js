@@ -69,6 +69,8 @@ mongoose.connection.on('error', (err) => {
 // Health check
 app.get('/', (req, res) => {
   const isConnected = mongoose.connection.readyState === 1;
+  console.log('Health check - MongoDB readyState:', mongoose.connection.readyState);
+  console.log('Health check - isConnected:', isConnected);
   res.json({ 
     message: 'API is running!',
     mongodb: isConnected ? 'connected' : 'disconnected',
