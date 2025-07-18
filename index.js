@@ -34,7 +34,18 @@ const connectDB = async () => {
     console.log('Attempting to connect to MongoDB...');
     console.log('Connection string starts with:', process.env.MONGODB_URI.substring(0, 20) + '...');
     
-    await mongoose.connect(process.env.MONGODB_URI);
+    // Check if already connected
+    if (mongoose.connection.readyState === 1) {
+      console.log('Already connected to MongoDB');
+      return true;
+    }
+    
+    await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000, // 5 second timeout
+      socketTimeoutMS: 45000, // 45 second timeout
+      bufferCommands: false, // Disable mongoose buffering
+      bufferMaxEntries: 0 // Disable mongoose buffering
+    });
     console.log('MongoDB connected successfully');
     return true;
   } catch (err) {
@@ -92,6 +103,12 @@ app.get('/', (req, res) => {
 // Get time slots availability
 app.get('/api/time-slots', async (req, res) => {
   try {
+    // Try to connect if not connected
+    if (mongoose.connection.readyState !== 1) {
+      console.log('Attempting to connect to MongoDB for /api/time-slots...');
+      await connectDB();
+    }
+    
     const isConnected = mongoose.connection.readyState === 1;
     if (!isConnected) {
       return res.status(500).json({ 
@@ -135,6 +152,12 @@ app.get('/api/time-slots', async (req, res) => {
 // Register a student
 app.post('/api/register', async (req, res) => {
   try {
+    // Try to connect if not connected
+    if (mongoose.connection.readyState !== 1) {
+      console.log('Attempting to connect to MongoDB for /api/register...');
+      await connectDB();
+    }
+    
     const isConnected = mongoose.connection.readyState === 1;
     if (!isConnected) {
       return res.status(500).json({ 
@@ -196,6 +219,12 @@ app.post('/api/register', async (req, res) => {
 // Admin: Get all registrations
 app.get('/api/admin/registrations', async (req, res) => {
   try {
+    // Try to connect if not connected
+    if (mongoose.connection.readyState !== 1) {
+      console.log('Attempting to connect to MongoDB for /api/admin/registrations...');
+      await connectDB();
+    }
+    
     const isConnected = mongoose.connection.readyState === 1;
     if (!isConnected) {
       return res.status(500).json({ 
