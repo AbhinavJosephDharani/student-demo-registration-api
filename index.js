@@ -71,10 +71,21 @@ app.get('/', (req, res) => {
   const isConnected = mongoose.connection.readyState === 1;
   console.log('Health check - MongoDB readyState:', mongoose.connection.readyState);
   console.log('Health check - isConnected:', isConnected);
+  console.log('Health check - Environment variables:');
+  console.log('- NODE_ENV:', process.env.NODE_ENV);
+  console.log('- MONGODB_URI exists:', !!process.env.MONGODB_URI);
+  console.log('- MONGODB_URI length:', process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0);
+  console.log('- MONGODB_URI starts with:', process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 20) + '...' : 'NOT SET');
+  
   res.json({ 
     message: 'API is running!',
     mongodb: isConnected ? 'connected' : 'disconnected',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    debug: {
+      readyState: mongoose.connection.readyState,
+      envExists: !!process.env.MONGODB_URI,
+      envLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0
+    }
   });
 });
 
