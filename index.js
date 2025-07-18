@@ -18,7 +18,10 @@ app.use((req, res, next) => {
   }
 });
 
-// Connect to MongoDB with better error handling
+// Global connection promise to avoid multiple connections
+let connectionPromise = null;
+
+// Connect to MongoDB with better error handling for serverless
 const connectDB = async () => {
   try {
     console.log('Environment check:');
@@ -31,50 +34,64 @@ const connectDB = async () => {
       return false;
     }
     
-    console.log('Attempting to connect to MongoDB...');
-    console.log('Connection string starts with:', process.env.MONGODB_URI.substring(0, 20) + '...');
-    
-    // Check if already connected
+    // If already connected, return true
     if (mongoose.connection.readyState === 1) {
       console.log('Already connected to MongoDB');
       return true;
     }
     
-    await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000, // 5 second timeout
+    // If connection is in progress, wait for it
+    if (connectionPromise) {
+      console.log('Connection in progress, waiting...');
+      await connectionPromise;
+      return mongoose.connection.readyState === 1;
+    }
+    
+    console.log('Attempting to connect to MongoDB...');
+    console.log('Connection string starts with:', process.env.MONGODB_URI.substring(0, 20) + '...');
+    
+    // Create connection promise
+    connectionPromise = mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000, // 10 second timeout
       socketTimeoutMS: 45000, // 45 second timeout
       bufferCommands: false, // Disable mongoose buffering
-      bufferMaxEntries: 0 // Disable mongoose buffering
+      bufferMaxEntries: 0, // Disable mongoose buffering
+      maxPoolSize: 1, // Limit connections for serverless
+      minPoolSize: 0, // Allow 0 connections when idle
+      maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
+      connectTimeoutMS: 10000, // 10 second connection timeout
     });
+    
+    await connectionPromise;
     console.log('MongoDB connected successfully');
     return true;
   } catch (err) {
     console.error('MongoDB connection error:', err.message);
     console.error('Full error:', err);
+    connectionPromise = null; // Reset promise on error
     return false;
   }
 };
 
 // Initialize database connection
-let dbConnected = false;
 connectDB().then(connected => {
-  dbConnected = connected;
+  console.log('Initial connection result:', connected);
 });
 
 // Update connection status when mongoose connects
 mongoose.connection.on('connected', () => {
   console.log('MongoDB connection established');
-  dbConnected = true;
+  connectionPromise = null; // Reset promise
 });
 
 mongoose.connection.on('disconnected', () => {
   console.log('MongoDB connection disconnected');
-  dbConnected = false;
+  connectionPromise = null; // Reset promise
 });
 
 mongoose.connection.on('error', (err) => {
   console.error('MongoDB connection error:', err);
-  dbConnected = false;
+  connectionPromise = null; // Reset promise
 });
 
 // Health check
@@ -103,14 +120,9 @@ app.get('/', (req, res) => {
 // Get time slots availability
 app.get('/api/time-slots', async (req, res) => {
   try {
-    // Try to connect if not connected
-    if (mongoose.connection.readyState !== 1) {
-      console.log('Attempting to connect to MongoDB for /api/time-slots...');
-      await connectDB();
-    }
-    
-    const isConnected = mongoose.connection.readyState === 1;
-    if (!isConnected) {
+    // Ensure connection
+    const connected = await connectDB();
+    if (!connected) {
       return res.status(500).json({ 
         error: 'Database not connected',
         message: 'MongoDB connection is not available'
@@ -152,14 +164,9 @@ app.get('/api/time-slots', async (req, res) => {
 // Register a student
 app.post('/api/register', async (req, res) => {
   try {
-    // Try to connect if not connected
-    if (mongoose.connection.readyState !== 1) {
-      console.log('Attempting to connect to MongoDB for /api/register...');
-      await connectDB();
-    }
-    
-    const isConnected = mongoose.connection.readyState === 1;
-    if (!isConnected) {
+    // Ensure connection
+    const connected = await connectDB();
+    if (!connected) {
       return res.status(500).json({ 
         error: 'Database not connected',
         message: 'MongoDB connection is not available'
@@ -219,14 +226,9 @@ app.post('/api/register', async (req, res) => {
 // Admin: Get all registrations
 app.get('/api/admin/registrations', async (req, res) => {
   try {
-    // Try to connect if not connected
-    if (mongoose.connection.readyState !== 1) {
-      console.log('Attempting to connect to MongoDB for /api/admin/registrations...');
-      await connectDB();
-    }
-    
-    const isConnected = mongoose.connection.readyState === 1;
-    if (!isConnected) {
+    // Ensure connection
+    const connected = await connectDB();
+    if (!connected) {
       return res.status(500).json({ 
         error: 'Database not connected',
         message: 'MongoDB connection is not available'
